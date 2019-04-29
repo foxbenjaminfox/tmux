@@ -1689,6 +1689,38 @@ u_int		 format_width(const char *);
 char		*format_trim_left(const char *, u_int);
 char		*format_trim_right(const char *, u_int);
 
+struct format_entry;
+struct format_tree;
+
+typedef void (*format_cb)(struct format_tree *, struct format_entry *);
+
+/* Entry in format tree. */
+struct format_entry {
+	char			*key;
+	char			*value;
+	time_t			 t;
+	format_cb		 cb;
+	RB_ENTRY(format_entry)	 entry;
+};
+
+/* Format entry tree. */
+struct format_tree {
+	struct client		*c;
+	struct session		*s;
+	struct winlink		*wl;
+	struct window		*w;
+	struct window_pane	*wp;
+
+	struct cmdq_item	*item;
+	struct client		*client;
+	u_int			 tag;
+	int			 flags;
+	time_t			 time;
+	u_int			 loop;
+
+	RB_HEAD(format_entry_tree, format_entry) tree;
+};
+
 /* notify.c */
 void	notify_hook(struct cmdq_item *, const char *);
 void	notify_input(struct window_pane *, struct evbuffer *);
@@ -1698,6 +1730,17 @@ void	notify_winlink(const char *, struct winlink *);
 void	notify_session_window(const char *, struct session *, struct window *);
 void	notify_window(const char *, struct window *);
 void	notify_pane(const char *, struct window_pane *);
+
+struct notify_entry {
+	const char		*name;
+
+	struct client		*client;
+	struct session		*session;
+	struct window		*window;
+	int			 pane;
+
+	struct cmd_find_state	 fs;
+};
 
 /* options.c */
 struct options	*options_create(struct options *);
@@ -1924,6 +1967,37 @@ struct window_pane *cmd_mouse_pane(struct mouse_event *, struct session **,
 		     struct winlink **);
 char		*cmd_template_replace(const char *, const char *, int);
 extern const struct cmd_entry *cmd_table[];
+
+const struct cmd_entry *cmd_entry_from_plugin;
+
+#ifdef NO_CMD_PLUGINS
+
+#define CMD_TABLE_LOOP(arg) \
+  for (arg = cmd_table; *arg != NULL; arg++)
+
+#else
+
+#define CMD_TABLE_LOOP(arg) \
+	for ( \
+	    int i = (arg = cmd_table, 0), \
+	        cmds_from_plugin = 0; \
+	        !cmds_from_plugin || i != -1; \
+	        cmds_from_plugin \
+	          ? \
+	            i = find_next_plugin_index(CMD_PLUGIN, i), \
+	            cmd_entry_from_plugin = &plugins[i].cmd, \
+	            arg = &cmd_entry_from_plugin \
+	          : \
+	            arg++, (*arg == NULL \
+	              ? \
+	                cmds_from_plugin = 1, \
+	                i = find_first_plugin_index(CMD_PLUGIN), \
+	                cmd_entry_from_plugin = &plugins[i].cmd, \
+	                arg = &cmd_entry_from_plugin \
+	              : 0) \
+	  )
+
+#endif
 
 /* cmd-attach-session.c */
 enum cmd_retval	 cmd_attach_session(struct cmdq_item *, const char *, int, int,
@@ -2518,5 +2592,62 @@ int		 style_is_default(struct style *);
 /* spawn.c */
 struct winlink	*spawn_window(struct spawn_context *, char **);
 struct window_pane *spawn_pane(struct spawn_context *, char **);
+
+/* plugin.c */
+void	 init_plugins(void);
+void	 load_plugin(const char* name);
+void	 load_plugin_dir(const char* base);
+void	 plugin_notify(struct notify_entry *ne);
+void	 get_plugins_list(char **list);
+char	*plugin_call(const char *func, const char *arg);
+int	 find_first_plugin_index(int type);
+int	 find_next_plugin_index(int type, int from);
+
+struct plugin;
+
+struct format_plugin {
+	const char	*name;
+	format_cb	 cb;
+};
+
+typedef char* (*plugin_function_cb)(const char *arg);
+
+struct function_plugin {
+	const char		*name;
+	plugin_function_cb	 cb;
+};
+
+typedef void (*notification_cb)(struct notify_entry *ne);
+struct notification_plugin {
+	const char	*event;
+	notification_cb	 cb;
+};
+
+struct multi_plugin {
+	u_int		 length;
+	struct plugin	*plugins;
+};
+
+struct plugin {
+	int type;
+#define FORMAT_PLUGIN 1
+#define FORMAT_FUNCTION_PLUGIN 2
+#define CMD_PLUGIN 3
+#define NOTIFICATION_PLUGIN 4
+#define MULTI_PLUGIN 5
+
+	union {
+		struct format_plugin		format;
+		struct function_plugin		function;
+		struct cmd_entry		cmd;
+		struct notification_plugin	notify;
+		struct multi_plugin		multi;
+	};
+};
+
+typedef struct plugin PLUGIN;
+
+extern int		 plugins_length;
+extern struct plugin	*plugins;
 
 #endif /* TMUX_H */

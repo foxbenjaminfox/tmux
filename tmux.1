@@ -3674,6 +3674,10 @@ Shows the global list of hooks with
 .Fl g ,
 otherwise the session hooks.
 .El
+.Pp
+Hook plugins (see
+.Sx PLUGINS )
+can also register hooks, which are managed separately.
 .Sh MOUSE SUPPORT
 If the
 .Ic mouse
@@ -3896,6 +3900,13 @@ with
 .Ql bar
 throughout.
 .Pp
+Functions declared by format function plugins (see the
+.Sx PLUGINS
+section) can be called with an 'f:' prefix, followed by the name of the function and another colon. For example, a prefix of
+.Ql f:foo:
+would call a plugin-defined function named
+.Ql foo .
+.Pp
 In addition, the first line of a shell command's output may be inserted using
 .Ql #() .
 For example,
@@ -4000,6 +4011,8 @@ The following variables are available, where appropriate:
 .It Li "pane_tty" Ta "" Ta "Pseudo terminal of pane"
 .It Li "pane_width" Ta "" Ta "Width of pane"
 .It Li "pid" Ta ""  Ta "Server PID"
+.It Li "plugin_count" Ta ""  Ta "Number of active plugins"
+.It Li "plugin_list" Ta ""  Ta "List of active plugins"
 .It Li "rectangle_toggle" Ta "" Ta "1 if rectangle selection is activated"
 .It Li "scroll_region_lower" Ta "" Ta "Bottom of scroll region in pane"
 .It Li "scroll_region_upper" Ta "" Ta "Top of scroll region in pane"
@@ -4799,6 +4812,30 @@ option above and the
 .Xr xterm 1
 man page.
 .El
+.Sh PLUGINS
+Plugins, distributed as shared objects, can modify the internal workings of
+.Nm .
+.Pp
+There are currently four types of possible plugins:
+.Bl -tag -width Ds
+.It Ic Command plugins
+Define new
+.Nm
+commands.
+.It Ic Hook plugins
+Run in response to hooks (see the
+.Sx HOOKS
+section).
+.It Ic Format variable plugins
+Define new format variables, which can be used as described in the
+.Sx FORMATS
+section.
+.It Ic Format function plugins
+Define formatting functions which can be prefixed to format expressions, as described in the
+.Sx FORMATS
+section.
+.El
+
 .Sh CONTROL MODE
 .Nm
 offers a textual interface called

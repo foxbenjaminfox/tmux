@@ -383,7 +383,7 @@ cmd_parse(int argc, char **argv, const char *file, u_int line, char **cause)
 retry:
 	ambiguous = 0;
 	entry = NULL;
-	for (entryp = cmd_table; *entryp != NULL; entryp++) {
+	CMD_TABLE_LOOP(entryp) {
 		if ((*entryp)->alias != NULL &&
 		    strcmp((*entryp)->alias, argv[0]) == 0) {
 			ambiguous = 0;
@@ -438,7 +438,7 @@ retry:
 
 ambiguous:
 	*s = '\0';
-	for (entryp = cmd_table; *entryp != NULL; entryp++) {
+	CMD_TABLE_LOOP(entryp) {
 		if (strncmp((*entryp)->name, argv[0], strlen(argv[0])) != 0)
 			continue;
 		if (strlcat(s, (*entryp)->name, sizeof s) >= sizeof s)

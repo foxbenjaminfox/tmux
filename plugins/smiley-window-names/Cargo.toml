@@ -1,0 +1,14 @@
+[package]
+name = "smiley-window-names"
+version = "0.0.1"
+authors = ["Benjamin Fox <foxbenjaminfox@gmail.com>"]
+edition = "2018"
+license = "ISC"
+
+[dependencies]
+tmux_plugin = "0.0.1"
+libc = "0.2.43"
+
+[lib]
+name = "smileywindownames"
+crate-type = ["cdylib"]

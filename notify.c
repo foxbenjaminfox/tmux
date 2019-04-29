@@ -23,17 +23,6 @@
 
 #include "tmux.h"
 
-struct notify_entry {
-	const char		*name;
-
-	struct client		*client;
-	struct session		*session;
-	struct window		*window;
-	int			 pane;
-
-	struct cmd_find_state	 fs;
-};
-
 static void
 notify_hook_formats(struct cmdq_item *item, struct session *s, struct window *w,
     int pane)
@@ -127,6 +116,7 @@ notify_callback(struct cmdq_item *item, void *data)
 	if (strcmp(ne->name, "session-window-changed") == 0)
 		control_notify_session_window_changed(ne->session);
 
+	plugin_notify(ne);
 	notify_insert_hook(item, ne);
 
 	if (ne->client != NULL)

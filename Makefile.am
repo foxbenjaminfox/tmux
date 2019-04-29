@@ -12,6 +12,10 @@ EXTRA_DIST = \
 # Preprocessor flags.
 AM_CPPFLAGS += @XOPEN_DEFINES@ -DTMUX_CONF="\"$(sysconfdir)/tmux.conf\""
 
+# For loading plugins
+AM_LDFLAGS += -ldl
+AM_LDFLAGS += -rdynamic
+
 # Additional object files.
 LDADD = $(LIBOBJS)
 
@@ -149,6 +153,7 @@ dist_tmux_SOURCES = \
 	options-table.c \
 	options.c \
 	paste.c \
+	plugin.c \
 	proc.c \
 	resize.c \
 	screen-redraw.c \

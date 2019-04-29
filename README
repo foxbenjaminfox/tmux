@@ -1,3 +1,10 @@
+This is a fork of tmux, which adds support for plugins.
+it is still in a very experimental state. Use at your own risk.
+
+For example plugins, see the ./plugins directory.
+Each plugin compiles to a shared object file, which should be placed under $HOME/.tmux/plugins.
+tmux will automatically detect .so files in that directory and load them as plugins.
+
 Welcome to tmux!
 
 tmux is a terminal multiplexer: it enables a number of terminals to be created,

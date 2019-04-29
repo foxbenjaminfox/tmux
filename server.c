@@ -220,6 +220,7 @@ server_start(struct tmuxproc *client, struct event_base *base, int lockfd,
 		c->flags |= CLIENT_EXIT;
 	}
 
+	init_plugins();
 	start_cfg();
 	server_add_accept(0);
 

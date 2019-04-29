@@ -1,0 +1,17 @@
+[package]
+name = "tmux-format-pretty-cwd"
+version = "0.0.1"
+authors = ["Benjamin Fox <foxbenjaminfox@gmail.com>"]
+edition = "2018"
+license = "ISC"
+
+[dependencies]
+tmux_plugin = "0.0.1"
+dirs = "1.0.4"
+libc = "0.2.43"
+procinfo = "0.4.2"
+users = "0.8.0"
+
+[lib]
+name = "prettycwd"
+crate-type = ["cdylib"]

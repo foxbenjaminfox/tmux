@@ -1,0 +1,13 @@
+[package]
+name = "trim"
+version = "0.0.1"
+authors = ["Benjamin Fox <foxbenjaminfox@gmail.com>"]
+edition = "2018"
+license = "ISC"
+
+[dependencies]
+tmux_plugin = "0.0.1"
+
+[lib]
+name = "trim"
+crate-type = ["cdylib"]

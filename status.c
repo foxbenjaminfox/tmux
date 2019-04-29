@@ -1299,7 +1299,7 @@ status_prompt_complete_list(u_int *size, const char *s)
 	};
 
 	*size = 0;
-	for (cmdent = cmd_table; *cmdent != NULL; cmdent++) {
+	CMD_TABLE_LOOP(cmdent) {
 		if (strncmp((*cmdent)->name, s, slen) == 0) {
 			list = xreallocarray(list, (*size) + 1, sizeof *list);
 			list[(*size)++] = xstrdup((*cmdent)->name);

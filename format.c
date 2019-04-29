@@ -103,32 +103,6 @@ format_job_cmp(struct format_job *fj1, struct format_job *fj2)
 /* Limit on recursion. */
 #define FORMAT_LOOP_LIMIT 10
 
-/* Entry in format tree. */
-struct format_entry {
-	char			*key;
-	char			*value;
-	time_t			 t;
-	format_cb		 cb;
-	RB_ENTRY(format_entry)	 entry;
-};
-
-/* Format entry tree. */
-struct format_tree {
-	struct client		*c;
-	struct session		*s;
-	struct winlink		*wl;
-	struct window		*w;
-	struct window_pane	*wp;
-
-	struct cmdq_item	*item;
-	struct client		*client;
-	u_int			 tag;
-	int			 flags;
-	time_t			 time;
-	u_int			 loop;
-
-	RB_HEAD(format_entry_tree, format_entry) tree;
-};
 static int format_entry_cmp(struct format_entry *, struct format_entry *);
 RB_GENERATE_STATIC(format_entry_tree, format_entry, entry, format_entry_cmp);
 
@@ -715,6 +689,20 @@ format_cb_cursor_character(struct format_tree *ft, struct format_entry *fe)
 		xasprintf(&fe->value, "%.*s", (int)gc.data.size, gc.data.data);
 }
 
+/* Callback for number of active plugins. */
+static void
+format_cb_plugin_count (__unused struct format_tree *ft, struct format_entry *fe)
+{
+	xasprintf(&fe->value, "%d", plugins_length);
+}
+
+/* Callback for list of active plugins. */
+static void
+format_cb_plugin_list (__unused struct format_tree *ft, struct format_entry *fe)
+{
+	get_plugins_list(&fe->value);
+}
+
 /* Merge a format tree. */
 static void
 format_merge(struct format_tree *ft, struct format_tree *from)
@@ -774,6 +762,9 @@ format_create(struct client *c, struct cmdq_item *item, int tag, int flags)
 		if (item->shared != NULL && item->shared->formats != NULL)
 			format_merge(ft, item->shared->formats);
 	}
+
+	format_add_cb(ft, "plugin_count", format_cb_plugin_count);
+	format_add_cb(ft, "plugin_list", format_cb_plugin_list);
 
 	return (ft);
 }
@@ -1121,7 +1112,7 @@ format_build_modifiers(struct format_tree *ft, const char **s, u_int *count)
 			cp++;
 
 		/* Check single character modifiers with no arguments. */
-		if (strchr("lmCbdtqETSWP", cp[0]) != NULL &&
+		if (strchr("flmCbdtqETSWP", cp[0]) != NULL &&
 		    format_is_end(cp[1])) {
 			format_add_modifier(&list, count, cp, 1, NULL, 0);
 			cp++;
@@ -1375,10 +1366,10 @@ format_replace(struct format_tree *ft, const char *key, size_t keylen,
 {
 	struct window_pane	*wp = ft->wp;
 	const char		*errptr, *copy, *cp;
-	char			*copy0, *condition, *found, *new;
+	char			*copy0, *condition, *found, *new, *func, *funcarg;
 	char			*value, *left, *right;
 	size_t			 valuelen;
-	int			 modifiers = 0, limit = 0;
+	int			 modifiers = 0, limit = 0, call = 0;
 	struct format_modifier  *list, *fm, *cmp = NULL, *search = NULL;
 	struct format_modifier  *sub = NULL;
 	u_int			 i, count;
@@ -1449,6 +1440,16 @@ format_replace(struct format_tree *ft, const char *key, size_t keylen,
 			case 'P':
 				modifiers |= FORMAT_PANES;
 				break;
+			case 'f':
+				funcarg = func = xstrndup(key, keylen) + 2;
+				while(*funcarg++ != '\0') {
+					if (funcarg[0] == ':') {
+						*(funcarg++) = '\0';
+						break;
+					}
+				}
+				call = 1;
+				break;
 			}
 		} else if (fm->size == 2) {
 			if (strcmp(fm->modifier, "||") == 0 ||
@@ -1462,6 +1463,16 @@ format_replace(struct format_tree *ft, const char *key, size_t keylen,
 	/* Is this a literal string? */
 	if (modifiers & FORMAT_LITERAL) {
 		value = xstrdup(copy);
+		goto done;
+	}
+
+	if (call) {
+		log_debug("%s: calling plugin function %s", __func__, func);
+		value = format_expand(ft, funcarg);
+		log_debug("%s: function arg value %s => %s", __func__, funcarg, value);
+		value = plugin_call(func, value);
+		log_debug("%s: plugin function (%s) return value %s", __func__, func, value);
+		free(func - 2);
 		goto done;
 	}
 
@@ -1858,6 +1869,14 @@ format_defaults(struct format_tree *ft, struct client *c, struct session *s,
 		format_defaults_winlink(ft, wl);
 	if (wp != NULL)
 		format_defaults_pane(ft, wp);
+
+	for (int i = 0; i < plugins_length; i++) {
+		struct format_plugin fp;
+		if (plugins[i].type != FORMAT_PLUGIN)
+			continue;
+		fp = plugins[i].format;
+		format_add_cb(ft, fp.name, fp.cb);
+	}
 }
 
 /* Set default format keys for a session. */

@@ -160,7 +160,7 @@ cmd_list_keys_commands(struct cmd *self, struct cmdq_item *item)
 	ft = format_create(item->client, item, FORMAT_NONE, 0);
 	format_defaults(ft, NULL, NULL, NULL, NULL);
 
-	for (entryp = cmd_table; *entryp != NULL; entryp++) {
+	CMD_TABLE_LOOP(entryp) {
 		entry = *entryp;
 
 		format_add(ft, "command_list_name", "%s", entry->name);
